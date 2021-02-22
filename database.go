@@ -8,7 +8,7 @@ import (
 )
 
 func initDB() *sql.DB {
-	db, err := sql.Open("sqlite3", filepath.Join(PodDirectory, "data.db"))
+	db, err := sql.Open("sqlite3", filepath.Join(podDirectory, "data.db"))
 	if err != nil {
 		fmt.Println("Failed to load ~/.instapod/data.db . Check your permissions")
 		os.Exit(1)

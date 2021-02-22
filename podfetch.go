@@ -17,7 +17,7 @@ func getPod(videoURL string) (episode, error) {
 	uuidbin, _ := epuuid.MarshalBinary()
 	uuidstring := hex.EncodeToString(uuidbin)
 
-	fullpath := filepath.Join(PodDirectory, uuidstring)
+	fullpath := filepath.Join(podDirectory, uuidstring)
 	jsonBlob, err := getAndConvert(videoURL, fullpath)
 
 	if err != nil {
@@ -47,7 +47,7 @@ func getPod(videoURL string) (episode, error) {
 	fetchedEp.URL = ytd.WebpageURL
 	fetchedEp.UUID = epuuid
 
-	_, err = Database.Exec(`INSERT INTO episodes(
+	_, err = database.Exec(`INSERT INTO episodes(
 		UUID,
 		title,
 		description,
@@ -93,4 +93,11 @@ func getAndConvert(videoURL string, name string) ([]byte, error) {
 	}
 
 	return output, nil
+}
+
+func canGetVideo(videoURL string) ([]byte, error) {
+	command := exec.Command("youtube-dl", "-j",
+		videoURL)
+
+	return command.Output()
 }
