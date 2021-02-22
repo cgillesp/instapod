@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/eduncan911/podcast"
@@ -53,7 +54,7 @@ func serve() {
 
 	r.HandleFunc("/instapod/episodes", addEpisode).Methods("POST")
 	r.HandleFunc("/instapod/feed/{key}", getFeed)
-	r.HandleFunc("/instapod/files/{id}", getFile)
+	r.HandleFunc("/instapod/files/{id}.mp3", getFile)
 	http.Handle("/", r)
 	log.Fatal(http.ListenAndServe(":19565", nil))
 }
@@ -67,13 +68,17 @@ func getFeed(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, string(makePodcastFeed()))
+	w.Write(makePodcastFeed())
 
 }
 
 func makePodcastFeed() []byte {
 	now := time.Now()
 	pod := podcast.New(Config.Title, Config.Link, Config.Description, &now, &now)
+
+	if len(Config.ImageURL) > 0 {
+		pod.AddImage(Config.ImageURL)
+	}
 
 	eps := getEpisodes()
 
@@ -119,7 +124,9 @@ func getURL(id uuid.UUID) string {
 }
 
 func getFile(w http.ResponseWriter, r *http.Request) {
-
+	id := mux.Vars(r)["id"]
+	path := filepath.Join(PodDirectory, id) + ".mp3"
+	http.ServeFile(w, r, path)
 }
 
 func getEpisodes() []episode {

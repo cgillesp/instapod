@@ -68,6 +68,7 @@ type configuration struct {
 	Link        string
 	Description string
 	BaseURL     string
+	ImageURL    string
 }
 
 func getConfig() configuration {
@@ -103,6 +104,7 @@ func newConfig() configuration {
 		Description: "Catch up on whatever you've been meaning to listen to!",
 		Link:        "demos.charliegillespie.com",
 		BaseURL:     "https://demos.charliegillespie.com/",
+		ImageURL:    "",
 	}
 }
 
