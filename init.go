@@ -93,6 +93,8 @@ func getConfig() configuration {
 
 	json.Unmarshal(configBytes, &config)
 
+	fmt.Printf("Add Key: %s\n", config.AddKey)
+	fmt.Printf("Read Key: %s\n", config.ReadKey)
 	return config
 }
 
