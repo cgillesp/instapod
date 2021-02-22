@@ -2,24 +2,27 @@ package main
 
 import (
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
+	"path"
 	"time"
 
+	"github.com/eduncan911/podcast"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// podDirectory : Directory of instapod's data
-var podDirectory string
+// PodDirectory : Directory of instapod's data
+var PodDirectory string
 
-// database : Common SQLite database for all episodes
-var database *sql.DB
+// Database : Common SQLite Database for all episodes
+var Database *sql.DB
 
-var addKey string
-var readKey string
+var Config configuration
 
 type episode struct {
 	title       string
@@ -28,17 +31,20 @@ type episode struct {
 	UUID        uuid.UUID
 	addedDate   time.Time
 	pubDate     time.Time
+	duration    time.Duration
+	size        int64
 }
 
 func main() {
 	// Initialization
 	checkDeps()
-	podDirectory = getDir()
-	database = initDB()
 
-	defer database.Close()
+	PodDirectory = getDir()
+	Config = getConfig()
+	Database = initDB()
 
-	addKey = "hello"
+	// defer Database.Close()
+
 	serve()
 }
 
@@ -46,17 +52,112 @@ func serve() {
 	r := mux.NewRouter()
 
 	r.HandleFunc("/instapod/episodes", addEpisode).Methods("POST")
+	r.HandleFunc("/instapod/feed/{key}", getFeed)
+	r.HandleFunc("/instapod/files/{id}", getFile)
 	http.Handle("/", r)
 	log.Fatal(http.ListenAndServe(":19565", nil))
+}
+
+func getFeed(w http.ResponseWriter, r *http.Request) {
+	sentKey := mux.Vars(r)["key"]
+
+	if sentKey != Config.ReadKey {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, string(makePodcastFeed()))
+
+}
+
+func makePodcastFeed() []byte {
+	now := time.Now()
+	pod := podcast.New(Config.Title, Config.Link, Config.Description, &now, &now)
+
+	eps := getEpisodes()
+
+	for _, e := range eps {
+
+		item := podcast.Item{
+			Title:       e.title,
+			Description: e.description,
+			Link:        e.URL,
+			PubDate:     &e.addedDate,
+			GUID:        getHexUUID(e.UUID),
+		}
+		// needs a lot of work
+		item.AddEnclosure(getURL(e.UUID), podcast.MP3, e.size)
+
+		item.AddDuration(int64(e.duration / time.Second))
+		pod.AddItem(item)
+	}
+
+	return pod.Bytes()
+}
+
+func getHexUUID(id uuid.UUID) string {
+	uuidbin, err := id.MarshalBinary()
+	if err != nil {
+		panic(err)
+	}
+	return hex.EncodeToString(uuidbin)
+}
+
+func getURL(id uuid.UUID) string {
+	hexstring := getHexUUID(id)
+	filename := hexstring + ".mp3"
+
+	u, err := url.Parse(Config.BaseURL)
+
+	if err != nil {
+		panic("Configured Base URL is invalid")
+	}
+
+	u.Path = path.Join("/instapod/files/", filename)
+	return u.String()
+}
+
+func getFile(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func getEpisodes() []episode {
+	rows, err := Database.Query(`SELECT UUID, title, description,
+	URL, addedDate, pubDate, duration, size FROM episodes;`)
+	if err != nil {
+		panic(err)
+	}
+	defer rows.Close()
+
+	eps := []episode{}
+	for rows.Next() {
+		var e episode
+		var addedDateInt int64
+		var pubDateInt int64
+		var durationInt int64
+		err := rows.Scan(&e.UUID, &e.title, &e.description,
+			&e.URL, &addedDateInt, &pubDateInt, &durationInt, &e.size)
+
+		if err != nil {
+			panic(err)
+		}
+
+		e.addedDate = time.Unix(addedDateInt, 0)
+		e.pubDate = time.Unix(pubDateInt, 0)
+		e.duration = time.Duration(durationInt) * time.Second
+		eps = append(eps, e)
+	}
+	return eps
 }
 
 func addEpisode(w http.ResponseWriter, r *http.Request) {
 
 	r.ParseForm()
-	submittedKey := r.Form.Get("key")
+	sentKey := r.Form.Get("key")
 	videoURL := r.Form.Get("url")
 
-	if submittedKey != addKey {
+	if sentKey != Config.AddKey {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -69,7 +170,7 @@ func addEpisode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusAccepted)
-	fmt.Fprintf(w, "Received. Key: %s \n URL: %s", submittedKey, videoURL)
+	fmt.Fprintf(w, "Received. URL: %s", videoURL)
 
 	go getPod(videoURL)
 }

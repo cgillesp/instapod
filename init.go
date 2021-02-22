@@ -1,7 +1,11 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"os/user"
@@ -55,4 +59,58 @@ func getDir() string {
 	}
 
 	return podDir
+}
+
+type configuration struct {
+	AddKey      string
+	ReadKey     string
+	Title       string
+	Link        string
+	Description string
+	BaseURL     string
+}
+
+func getConfig() configuration {
+	configPath := filepath.Join(PodDirectory, "config.json")
+	configBytes, err := ioutil.ReadFile(configPath)
+
+	if err != nil {
+		if os.IsNotExist(err) {
+			newConfigFile, err := json.Marshal(newConfig())
+			ioutil.WriteFile(configPath, newConfigFile, 0744)
+			if err != nil {
+				panic(err)
+			}
+			return (getConfig())
+		} else {
+			panic(err)
+		}
+
+	}
+
+	config := configuration{}
+
+	json.Unmarshal(configBytes, &config)
+
+	return config
+}
+
+func newConfig() configuration {
+	return configuration{
+		AddKey:      getKeyBase64(),
+		ReadKey:     getKeyBase64(),
+		Title:       "Instacast feed",
+		Description: "Catch up on whatever you've been meaning to listen to!",
+		Link:        "demos.charliegillespie.com",
+		BaseURL:     "https://demos.charliegillespie.com/",
+	}
+}
+
+func getKeyBase64() string {
+	b := make([]byte, 16)
+	_, err := rand.Read(b)
+	if err != nil {
+		panic(err)
+	}
+	return base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(b)
 }

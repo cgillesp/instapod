@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/hex"
 	"encoding/json"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"time"
@@ -17,8 +18,8 @@ func getPod(videoURL string) (episode, error) {
 	uuidbin, _ := epuuid.MarshalBinary()
 	uuidstring := hex.EncodeToString(uuidbin)
 
-	fullpath := filepath.Join(podDirectory, uuidstring)
-	jsonBlob, err := getAndConvert(videoURL, fullpath)
+	fullpath := filepath.Join(PodDirectory, uuidstring)
+	jsonBlob, err, fileSize := getAndConvert(videoURL, fullpath)
 
 	if err != nil {
 		// TODO: clean up files when this operation fails
@@ -29,6 +30,7 @@ func getPod(videoURL string) (episode, error) {
 		Title       string
 		Description string
 		UploadDate  string `json:"upload_date"`
+		Duration    int64  `json:"duration"`
 		WebpageURL  string `json:"webpage_url"`
 	}
 
@@ -42,25 +44,31 @@ func getPod(videoURL string) (episode, error) {
 	fetchedEp.addedDate = time.Now()
 	fetchedEp.pubDate, err = time.Parse("20060102", ytd.UploadDate)
 	if err != nil {
-		return episode{}, err
+		fetchedEp.pubDate = time.Unix(0, 0)
 	}
+	fetchedEp.duration = time.Duration(ytd.Duration) * time.Second
+
 	fetchedEp.URL = ytd.WebpageURL
 	fetchedEp.UUID = epuuid
+	fetchedEp.size = fileSize
 
-	_, err = database.Exec(`INSERT INTO episodes(
+	_, err = Database.Exec(`INSERT INTO episodes(
 		UUID,
 		title,
 		description,
 		URL,
 		addedDate,
-		pubDate
+		pubDate,
+		duration,
+		size
 		)
-		VALUES(?, ?, ?, ?, ?, ?);
+		VALUES(?, ?, ?, ?, ?, ?, ?, ?);
 		`, fetchedEp.UUID, fetchedEp.title, fetchedEp.description,
-		fetchedEp.URL, fetchedEp.addedDate.Unix(), fetchedEp.pubDate.Unix())
+		fetchedEp.URL, fetchedEp.addedDate.Unix(), fetchedEp.pubDate.Unix(),
+		int64(fetchedEp.duration/time.Second), fetchedEp.size)
 
 	if err != nil {
-		panic(err)
+		return fetchedEp, err
 	}
 
 	return fetchedEp, nil
@@ -70,7 +78,7 @@ func getPod(videoURL string) (episode, error) {
 // and filename (without an extension) and returning the video
 // metadata (or error), plus placing the audio in an mp3 file
 // at the passed path
-func getAndConvert(videoURL string, name string) ([]byte, error) {
+func getAndConvert(videoURL string, name string) ([]byte, error, int64) {
 	command := exec.Command("youtube-dl",
 		"-x", "--audio-format", "mp3",
 		// E(-x)tract audio in mp3 format
@@ -89,10 +97,17 @@ func getAndConvert(videoURL string, name string) ([]byte, error) {
 	output, err := command.Output()
 
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
-	return output, nil
+	stat, err := os.Stat(name + ".mp3")
+
+	if err != nil {
+		panic(err)
+	}
+
+	return output, nil, stat.Size()
+	// return output, nil, 0
 }
 
 func canGetVideo(videoURL string) ([]byte, error) {

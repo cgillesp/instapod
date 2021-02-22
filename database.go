@@ -8,7 +8,7 @@ import (
 )
 
 func initDB() *sql.DB {
-	db, err := sql.Open("sqlite3", filepath.Join(podDirectory, "data.db"))
+	Database, err := sql.Open("sqlite3", filepath.Join(PodDirectory, "data.db"))
 	if err != nil {
 		fmt.Println("Failed to load ~/.instapod/data.db . Check your permissions")
 		os.Exit(1)
@@ -21,16 +21,19 @@ func initDB() *sql.DB {
 	description text,
 	URL text NOT NULL,
 	addedDate integer NOT NULL,
-	pubDate integer NOT NULL);
+	pubDate integer NOT NULL,
+	duration NOT NULL,
+	size NOT NULL
+	);
 	CREATE INDEX IF NOT EXISTS addedDate_idx on episodes (addedDate);
 	CREATE INDEX IF NOT EXISTS UUID_idx on episodes (UUID);
 	`
 
-	_, err = db.Exec(initcommand)
+	_, err = Database.Exec(initcommand)
 
 	if err != nil {
 		panic(err)
 	}
 
-	return db
+	return Database
 }
