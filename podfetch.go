@@ -3,8 +3,12 @@ package main
 import (
 	"encoding/hex"
 	"encoding/json"
+	"log"
+	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"time"
 
@@ -19,7 +23,7 @@ func getPod(videoURL string) (episode, error) {
 	uuidstring := hex.EncodeToString(uuidbin)
 
 	fullpath := filepath.Join(PodDirectory, uuidstring)
-	jsonBlob, err, fileSize := getAndConvert(videoURL, fullpath)
+	jsonBlob, fileSize, err := getAndConvert(videoURL, fullpath)
 
 	if err != nil {
 		// TODO: clean up files when this operation fails
@@ -71,6 +75,21 @@ func getPod(videoURL string) (episode, error) {
 		return fetchedEp, err
 	}
 
+	u, err := url.Parse(Config.BaseURL)
+	if err != nil {
+		panic("Configured Base URL is invalid")
+	}
+
+	u.Path = path.Join("/instapod/feed/")
+
+	resp, err := http.PostForm("https://overcast.fm/ping",
+		url.Values{"urlprefix": {u.String()}})
+
+	if err != nil {
+		log.Println(resp)
+		log.Println(err)
+	}
+
 	return fetchedEp, nil
 }
 
@@ -78,7 +97,7 @@ func getPod(videoURL string) (episode, error) {
 // and filename (without an extension) and returning the video
 // metadata (or error), plus placing the audio in an mp3 file
 // at the passed path
-func getAndConvert(videoURL string, name string) ([]byte, error, int64) {
+func getAndConvert(videoURL string, name string) ([]byte, int64, error) {
 	command := exec.Command("youtube-dl",
 		"-x", "--audio-format", "mp3",
 		// E(-x)tract audio in mp3 format
@@ -106,7 +125,7 @@ func getAndConvert(videoURL string, name string) ([]byte, error, int64) {
 		panic(err)
 	}
 
-	return output, nil, stat.Size()
+	return output, stat.Size(), nil
 	// return output, nil, 0
 }
 

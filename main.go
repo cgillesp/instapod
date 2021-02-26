@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"path/filepath"
 	"time"
@@ -23,6 +24,7 @@ var PodDirectory string
 // Database : Common SQLite Database for all episodes
 var Database *sql.DB
 
+// Config : Global app configuration
 var Config configuration
 
 type episode struct {
@@ -41,6 +43,16 @@ func main() {
 	checkDeps()
 
 	PodDirectory = getDir()
+
+	logpath := filepath.Join(PodDirectory, "logs.txt")
+
+	logfile, err := os.OpenFile(logpath,
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		panic(err)
+	}
+	log.SetOutput(logfile)
+
 	Config = getConfig()
 	Database = initDB()
 
@@ -95,7 +107,11 @@ func makePodcastFeed() []byte {
 		item.AddEnclosure(getURL(e.UUID), podcast.MP3, e.size)
 
 		item.AddDuration(int64(e.duration / time.Second))
-		pod.AddItem(item)
+		_, err := pod.AddItem(item)
+
+		if err != nil {
+			log.Println(err)
+		}
 	}
 
 	return pod.Bytes()

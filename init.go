@@ -83,10 +83,9 @@ func getConfig() configuration {
 				panic(err)
 			}
 			return (getConfig())
-		} else {
-			panic(err)
 		}
 
+		panic(err)
 	}
 
 	config := configuration{}
