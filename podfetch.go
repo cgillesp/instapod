@@ -80,14 +80,16 @@ func getPod(videoURL string) (episode, error) {
 		panic("Configured Base URL is invalid")
 	}
 
-	u.Path = path.Join("/instapod/feed/")
+	if u.Hostname() != "localhost" {
+		u.Path = path.Join("/instapod/feed/")
 
-	resp, err := http.PostForm("https://overcast.fm/ping",
-		url.Values{"urlprefix": {u.String()}})
+		resp, err := http.PostForm("https://overcast.fm/ping",
+			url.Values{"urlprefix": {u.String()}})
 
-	if err != nil {
-		log.Println(resp)
-		log.Println(err)
+		if err != nil {
+			log.Println(resp)
+			log.Println(err)
+		}
 	}
 
 	return fetchedEp, nil
@@ -101,10 +103,12 @@ func getAndConvert(videoURL string, name string) ([]byte, int64, error) {
 	command := exec.Command("youtube-dl",
 		"-x", "--audio-format", "mp3",
 		// E(-x)tract audio in mp3 format
-		"--audio-quality", "64k", "--embed-thumbnail",
+		"--audio-quality", "64k",
 		// 64kbps baby
-		"--add-metadata", "--print-json",
-		// Embed metadata in mp3, plus print metadata to stdio
+		"--print-json",
+		// Print metadata to stdio
+		// "--add-metadata", "--embed-thumbnail",
+		// Embed metadata in mp3 and thumbnail
 		"--postprocessor-args", "-ac 1",
 		// FFmpeg flags to mix down to mono (nb not to double-quote -ac 1)
 		"-o", name+".%(ext)s",
@@ -116,7 +120,10 @@ func getAndConvert(videoURL string, name string) ([]byte, int64, error) {
 	output, err := command.Output()
 
 	if err != nil {
-		panic(err)
+		log.Println("Error on " + name)
+		log.Println(string(output))
+		log.Println(err)
+		return output, 0, err
 	}
 
 	stat, err := os.Stat(name + ".mp3")

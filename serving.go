@@ -37,7 +37,8 @@ func getEpisodes() []episode {
 			&e.URL, &addedDateInt, &pubDateInt, &durationInt, &e.size)
 
 		if err != nil {
-			panic(err)
+			log.Println(err)
+			continue
 		}
 
 		e.addedDate = time.Unix(addedDateInt, 0)
@@ -129,5 +130,6 @@ func makePodcastFeed() []byte {
 		}
 	}
 
+	pod.Generator = "Instapod v0.1.0"
 	return pod.Bytes()
 }
