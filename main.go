@@ -103,6 +103,20 @@ func makePodcastFeed() []byte {
 			PubDate:     &e.addedDate,
 			GUID:        getHexUUID(e.UUID),
 		}
+
+		if len(item.Description) == 0 {
+			item.Description = "(No description)"
+		}
+		if len(item.Title) == 0 {
+			URL, err := url.Parse(item.Link)
+			if err == nil {
+				item.Title = fmt.Sprintf("%s, %s", URL.Hostname(),
+					e.pubDate.Format("1/2/06"))
+			} else {
+				item.Title = "Title unavailable"
+			}
+		}
+
 		// needs a lot of work
 		item.AddEnclosure(getURL(e.UUID), podcast.MP3, e.size)
 
