@@ -62,13 +62,15 @@ func getDir() string {
 }
 
 type configuration struct {
-	AddKey      string
-	ReadKey     string
-	Title       string
-	Link        string
-	Description string
-	BaseURL     string
-	ImageURL    string
+	AddKey       string
+	addKeyBytes  []byte
+	ReadKey      string
+	readKeyBytes []byte
+	Title        string
+	Link         string
+	Description  string
+	BaseURL      string
+	ImageURL     string
 }
 
 func getConfig() configuration {
@@ -92,8 +94,13 @@ func getConfig() configuration {
 
 	json.Unmarshal(configBytes, &config)
 
-	fmt.Printf("Add Key: %s\n", config.AddKey)
-	fmt.Printf("Read Key: %s\n", config.ReadKey)
+	fmt.Printf("Add Key: %s\n", string(config.AddKey))
+	fmt.Printf("Read Key: %s\n", string(config.ReadKey))
+
+	// we need these for constant time comparisons
+	config.addKeyBytes = []byte(config.AddKey)
+	config.readKeyBytes = []byte(config.ReadKey)
+
 	return config
 }
 

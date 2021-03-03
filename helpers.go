@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/subtle"
 	"encoding/hex"
 	"net/url"
 	"path"
@@ -29,4 +30,9 @@ func getURL(id uuid.UUID) string {
 
 	u.Path = path.Join("/instapod/files/", filename)
 	return u.String()
+}
+
+// Constant time equality for byte slice
+func safeEquals(a, b []byte) bool {
+	return subtle.ConstantTimeCompare(a, b) == 1
 }

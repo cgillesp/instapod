@@ -4,11 +4,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"log"
-	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"time"
 
@@ -73,23 +70,6 @@ func getPod(videoURL string) (episode, error) {
 
 	if err != nil {
 		return fetchedEp, err
-	}
-
-	u, err := url.Parse(Config.BaseURL)
-	if err != nil {
-		panic("Configured Base URL is invalid")
-	}
-
-	if u.Hostname() != "localhost" {
-		u.Path = path.Join("/instapod/feed/")
-
-		resp, err := http.PostForm("https://overcast.fm/ping",
-			url.Values{"urlprefix": {u.String()}})
-
-		if err != nil {
-			log.Println(resp)
-			log.Println(err)
-		}
 	}
 
 	return fetchedEp, nil

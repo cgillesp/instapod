@@ -55,7 +55,7 @@ func addEpisode(w http.ResponseWriter, r *http.Request) {
 	sentKey := r.Form.Get("key")
 	videoURL := r.Form.Get("url")
 
-	if sentKey != Config.AddKey {
+	if !safeEquals([]byte(sentKey), Config.addKeyBytes) {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -76,7 +76,7 @@ func addEpisode(w http.ResponseWriter, r *http.Request) {
 func getFeed(w http.ResponseWriter, r *http.Request) {
 	sentKey := mux.Vars(r)["key"]
 
-	if sentKey != Config.ReadKey {
+	if !safeEquals([]byte(sentKey), Config.readKeyBytes) {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
