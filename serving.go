@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -25,7 +26,12 @@ func getEpisodes() []episode {
 	if err != nil {
 		panic(err)
 	}
-	defer rows.Close()
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+			log.Println(err)
+		}
+	}(rows)
 
 	eps := []episode{}
 	for rows.Next() {
@@ -51,38 +57,57 @@ func getEpisodes() []episode {
 
 func addEpisode(w http.ResponseWriter, r *http.Request) {
 
-	r.ParseForm()
+	err := r.ParseForm()
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+	}
+
 	sentKey := r.Form.Get("key")
 	videoURL := r.Form.Get("url")
 
 	if !safeEquals([]byte(sentKey), Config.addKeyBytes) {
-		w.WriteHeader(http.StatusUnauthorized)
+		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
-	_, err := canGetVideo(videoURL)
+	_, err = canGetVideo(videoURL)
 
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusInternalServerError)
+		_, err := fmt.Fprintf(w, "❌ Failed to Fetch URL: %s", videoURL)
+		if err != nil {
+			log.Println(err)
+		}
 		return
 	}
 
 	w.WriteHeader(http.StatusAccepted)
-	fmt.Fprintf(w, "Received. URL: %s", videoURL)
+	_, err = fmt.Fprintf(w, "✅ Fetching URL: %s", videoURL)
+	if err != nil {
+		log.Println(err)
+	}
 
-	go getPod(videoURL)
+	go func() {
+		_, err := getPod(videoURL)
+		if err != nil {
+			log.Println(err)
+		}
+	}()
 }
 
 func getFeed(w http.ResponseWriter, r *http.Request) {
 	sentKey := mux.Vars(r)["key"]
 
 	if !safeEquals([]byte(sentKey), Config.readKeyBytes) {
-		w.WriteHeader(http.StatusUnauthorized)
+		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write(makePodcastFeed())
+	_, err := w.Write(makePodcastFeed())
+	if err != nil {
+		log.Println(err)
+	}
 
 }
 

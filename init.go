@@ -80,7 +80,10 @@ func getConfig() configuration {
 	if err != nil {
 		if os.IsNotExist(err) {
 			newConfigFile, err := json.Marshal(newConfig())
-			ioutil.WriteFile(configPath, newConfigFile, 0744)
+			if err != nil {
+				panic(err)
+			}
+			err = ioutil.WriteFile(configPath, newConfigFile, 0744)
 			if err != nil {
 				panic(err)
 			}
@@ -92,7 +95,11 @@ func getConfig() configuration {
 
 	config := configuration{}
 
-	json.Unmarshal(configBytes, &config)
+	err = json.Unmarshal(configBytes, &config)
+	if err != nil {
+		fmt.Println("Could not read config file ~/.instapod/config.json")
+		os.Exit(1)
+	}
 
 	fmt.Printf("Add Key: %s\n", string(config.AddKey))
 	fmt.Printf("Read Key: %s\n", string(config.ReadKey))
