@@ -92,9 +92,9 @@ func deleteOldEpisodes() (int64, error) {
 		return -1, err
 	}
 
-	twoHundredMegs := int64(100000000)
+	twoGigabytes := int64(2000000000)
 
-	if diskUsage >= twoHundredMegs {
+	if diskUsage >= twoGigabytes {
 		row := Database.QueryRow("SELECT uuid FROM episodes ORDER BY addedDate ASC LIMIT 1")
 		var oldestUUID uuid.UUID
 		err := row.Scan(&oldestUUID)
