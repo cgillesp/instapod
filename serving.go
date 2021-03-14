@@ -57,20 +57,30 @@ func getEpisodes() []episode {
 
 func addEpisode(w http.ResponseWriter, r *http.Request) {
 
-	err := r.ParseForm()
-	if err != nil {
+	var sentKey string
+	var videoURL string
+
+	if r.Method == http.MethodPost {
+		err := r.ParseForm()
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+		}
+		sentKey = r.Form.Get("key")
+		videoURL = r.Form.Get("url")
+	} else if r.Method == http.MethodGet {
+		queryStrings := r.URL.Query()
+		sentKey = queryStrings.Get("key")
+		videoURL = queryStrings.Get("url")
+	} else {
 		w.WriteHeader(http.StatusBadRequest)
 	}
-
-	sentKey := r.Form.Get("key")
-	videoURL := r.Form.Get("url")
 
 	if !safeEquals([]byte(sentKey), Config.addKeyBytes) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
-	_, err = canGetVideo(videoURL)
+	_, err := canGetVideo(videoURL)
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

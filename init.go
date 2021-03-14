@@ -103,6 +103,12 @@ func getConfig() configuration {
 
 	fmt.Printf("Add Key: %s\n", string(config.AddKey))
 	fmt.Printf("Read Key: %s\n", string(config.ReadKey))
+	bookmarklet := fmt.Sprintf(
+		"javascript:location.href='%s/instapod/episodes/?key='+encodeURIComponent('%s')+'&url='+encodeURIComponent(location.href)",
+		config.BaseURL,
+		string(config.AddKey),
+	)
+	fmt.Printf("Bookmarklet (use at your own risk--a malformed Base URL could cause problems): %s\n", bookmarklet)
 
 	// we need these for constant time comparisons
 	config.addKeyBytes = []byte(config.AddKey)

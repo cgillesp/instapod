@@ -59,7 +59,7 @@ func main() {
 func serve() {
 	r := mux.NewRouter()
 
-	r.HandleFunc("/instapod/episodes", addEpisode).Methods("POST")
+	r.HandleFunc("/instapod/episodes/", addEpisode)
 	r.HandleFunc("/instapod/feed/{key}", getFeed)
 	r.HandleFunc("/instapod/files/{id}.mp3", getFile)
 	http.Handle("/", r)
