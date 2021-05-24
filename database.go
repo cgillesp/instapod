@@ -52,7 +52,22 @@ func initDB() *sql.DB {
 		panic(err)
 	}
 
-	versionSet := `INSERT INTO meta (name, value) VALUES ("version", "1.0.1")
+	row := Database.QueryRow(`SELECT value FROM meta WHERE name="version"`)
+	var version string
+	err = row.Scan(&version)
+
+	if err != nil {
+		panic(err)
+	}
+
+	if version == "1.0.1" {
+		_, err = Database.Exec(`ALTER TABLE episodes ADD COLUMN available BOOLEAN NOT NULL DEFAULT TRUE`)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	versionSet := `INSERT INTO meta (name, value) VALUES ("version", "1.0.2")
 					ON CONFLICT(name) DO UPDATE SET
 					value=excluded.value;`
 

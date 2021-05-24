@@ -110,7 +110,7 @@ func deleteOldEpisodes() (int64, error) {
 			return diskUsage, err
 		}
 
-		_, err = Database.Exec("DELETE FROM episodes WHERE uuid=?", oldestUUID)
+		_, err = Database.Exec("UPDATE episodes SET available=FALSE WHERE uuid=?", oldestUUID)
 
 		if err != nil {
 			return -1, err

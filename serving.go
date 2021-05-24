@@ -22,7 +22,7 @@ func getFile(w http.ResponseWriter, r *http.Request) {
 
 func getEpisodes() []episode {
 	rows, err := Database.Query(`SELECT UUID, title, description,
-	URL, addedDate, pubDate, duration, size FROM episodes;`)
+	URL, addedDate, pubDate, duration, size FROM episodes WHERE available=TRUE;`)
 	if err != nil {
 		panic(err)
 	}
